@@ -1,5 +1,6 @@
 #include <string.h>
 #include "parser.hh"
+#include <iostream>
 
 using namespace AST;
 using namespace MysoreScript;
@@ -652,8 +653,16 @@ void IfStatement::interpret(Interpreter::Context &c)
 	if ((reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)
 	{
 		body->interpret(c);
+	} else {
+		else_statement->interpret(c);
 	}
 }
+
+void ElseStatement::interpret(Interpreter::Context &c) {
+	std::cout << "\n => Interpreting Else Statement \n";
+	body->interpret(c);
+}
+
 void WhileLoop::interpret(Interpreter::Context &c)
 {
 	while (!c.isReturning && (reinterpret_cast<intptr_t>(condition->evaluate(c))) & ~7)

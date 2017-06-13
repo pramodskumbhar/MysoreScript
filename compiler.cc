@@ -6,6 +6,7 @@
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Support/TargetSelect.h>
+#include <iostream>
 
 using namespace llvm;
 using llvm::legacy::PassManager;
@@ -116,7 +117,7 @@ ClosureInvoke Compiler::Context::compile()
 
 	// If you want to see the LLVM IR before optimisation, uncomment the
 	// following line:
-	//M->dump();
+	M->dump();
 
 	// Run the passes to optimise the function / module.
 	FPM.run(*F);
@@ -528,6 +529,7 @@ void Return::compile(Compiler::Context &c)
 
 void IfStatement::compile(Compiler::Context &c)
 {
+	std::cout << "\n ==> Compiling If Statement \n";
 	// Compute the condition
 	Value *cond = condition->compileExpression(c);
 	// Create the basic block that we'll branch to if the condition is false and
@@ -535,6 +537,8 @@ void IfStatement::compile(Compiler::Context &c)
 	BasicBlock *cont = BasicBlock::Create(c.C, "if.cont", c.F);
 	// Create the block that contains the body of the if statement
 	BasicBlock *ifBody = BasicBlock::Create(c.C, "if.body", c.F);
+	// Create the block that contains the body of the else statement
+	BasicBlock *elseBody = BasicBlock::Create(c.C, "else.body", c.F);
 	// Cast the condition to a small int.  We aren't unconditionally
 	// interpreting it as a small int, we just want to be able to do some
 	// arithmetic on it...
@@ -548,19 +552,40 @@ void IfStatement::compile(Compiler::Context &c)
 	// Create a comparison with 0 that we can then branch on
 	cond = c.B.CreateIsNotNull(cond);
 	// Branch to the body if it's not 0, to the continuation block if it is
-	c.B.CreateCondBr(cond, ifBody, cont);
+	c.B.CreateCondBr(cond, ifBody, elseBody);
 	// Compile the body of the if statement.
 	c.B.SetInsertPoint(ifBody);
 	body->compile(c);
+
 	// If the if statement didn't end with a return, then return control flow to
-	// the block after the if statement.
+	// the block after the if statement. We are checking InsertBlock != nullptr
+	// because if we have inserted terminator (as part of body statements, recursively
+	// somewhere in the call tree), InsertBlock ptr will be set to nullptr. And hence
+	// here we can check if that is the case. If not then that means there is no terminator
+	// and you can jump to continuation block.
 	if (c.B.GetInsertBlock() != nullptr)
 	{
 		c.B.CreateBr(cont);
 	}
+
+	//Continue from the else
+	c.B.SetInsertPoint(elseBody);
+	else_statement->compile(c);
+	if (c.B.GetInsertBlock() != nullptr)
+	{
+		c.B.CreateBr(cont);
+	}
+
 	// Continue from the end
 	c.B.SetInsertPoint(cont);
 }
+
+void ElseStatement::compile(Compiler::Context &c)
+{
+	std::cout << "\n ==> Compiling Else Statement \n";
+	body->compile(c);
+}
+
 void WhileLoop::compile(Compiler::Context &c)
 {
 	// Create three blocks, one for the body of the test (which we will

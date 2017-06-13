@@ -137,6 +137,7 @@ int main(int argc, char **argv)
 		// Parse one or more statements, report errors if there are any
 		if (!p.parse(input, p.g.statements, p.g.ignored, err, ast))
 		{
+			std::cout << "Can't parse the input! " << std::endl;
 			return EXIT_FAILURE;
 		}
 		logTimeSince(c1, "Parsing program");

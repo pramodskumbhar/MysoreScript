@@ -524,7 +524,7 @@ namespace AST
 		 * The interpreter is faster to start than the compiler, but is vastly
 		 * slower.
 		 */
-		static const int compileThreshold = 10;
+		static const int compileThreshold = 2;
 		/**
 		 * The number of times this closure has been interpreted.  Used to
 		 * determine whether it is now worthwhile to compile it.
@@ -742,6 +742,33 @@ namespace AST
 		}
 	};
 	/**
+	 * Else statement.
+	 */
+	struct ElseStatement : Statement
+	{
+		/**
+		 * The body of the else statement.
+		 */
+		ASTPtr<Statements> body;
+		/**
+		 * Interpret the condition, then interpret the body if the condition is
+		 * true.
+		 */
+		void interpret(Interpreter::Context &c) override;
+		/**
+		 * Compile the else statement.
+		 */
+		virtual void compile(Compiler::Context &c) override;
+		/**
+		 * Collect all of the variables used and defined in this statement.
+		 */
+		void collectVarUses(std::unordered_set<std::string> &decls,
+		                    std::unordered_set<std::string> &uses) override
+		{
+			body->collectVarUses(decls, uses);
+		}
+	};
+	/**
 	 * If statement.
 	 */
 	struct IfStatement : Statement
@@ -759,6 +786,8 @@ namespace AST
 		 * Interpret the condition, then interpret the body if the condition is
 		 * true.
 		 */
+		ASTPtr<ElseStatement> else_statement;
+
 		void interpret(Interpreter::Context &c) override;
 		/**
 		 * Compile the if statement.
